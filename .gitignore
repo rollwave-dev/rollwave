@@ -1,0 +1,28 @@
+# Binaries
+/rollwave
+/dist/
+/bin/
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Editor directories
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Go
+vendor/
+go.sum
+
+# Environments (Very Important!)
+.env
+.env.*
+!.env.example
+
+# Rollwave generated files
+# We generate temporary compose files during deployment to handle secret rotation.
+docker-compose.rollwave.generated.yml
+*.generated.yml

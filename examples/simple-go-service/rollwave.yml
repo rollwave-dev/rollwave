@@ -1,0 +1,12 @@
+version: v1
+project: example-project
+
+stack:
+  name: example-stack
+  compose_file: docker-compose.yml
+
+secrets:
+  stack_prefix: prod
+
+deploy:
+  with_secrets: true
