@@ -4,6 +4,7 @@
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/rollwave-dev/rollwave)](https://goreportcard.com/report/github.com/rollwave-dev/rollwave)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+![Rollwave Demo](demo.gif)
 
 Rollwave brings the developer experience of modern PaaS (like Vercel or Heroku) to your own servers running Docker Swarm. It handles the complexity of zero-downtime deployments, secret rotation, and build pipelines, so you don't have to write messy Bash scripts.
 
