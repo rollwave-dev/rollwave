@@ -10,3 +10,16 @@ secrets:
 
 deploy:
   with_secrets: true
+
+# Default variables (Production)
+variables:
+  APP_PORT: "8080"
+
+environments:
+  staging:
+    stack:
+      name: example-stack-staging
+    secrets:
+      stack_prefix: staging
+    variables:
+      APP_PORT: "8081"

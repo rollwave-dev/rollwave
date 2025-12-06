@@ -2,14 +2,12 @@ version: "3.8"
 
 services:
   web:
-    # IMPORTANT: Replace 'ttl.sh/...' with your own registry for production
-    # ttl.sh images are ephemeral and auto-deleted after 24 hours
     image: ttl.sh/rollwave-example-app
     build:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8080:80"
+      - "${APP_PORT:-8080}:80"
     secrets:
       - source: API_KEY
         target: API_KEY

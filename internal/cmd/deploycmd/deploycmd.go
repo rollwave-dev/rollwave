@@ -18,30 +18,42 @@ func New() *cobra.Command {
 		flagConfigPath  string
 		flagWithSecrets bool
 		flagBuild       bool
+		flagEnv         string
 	)
 
 	cmd := &cobra.Command{
 		Use:   "deploy",
 		Short: "Build from Compose and deploy",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// 1. Load Config
+			// 1. Load Base Config
 			cfgPath := flagConfigPath
 			if cfgPath == "" {
 				cfgPath = "rollwave.yml"
 			}
-			cfg, err := config.Load(cfgPath)
+			baseCfg, err := config.Load(cfgPath)
 			if err != nil {
 				return err
 			}
 
-			// 2. Read Compose File
+			// 2. Apply Environment Overrides (if --env is set)
+			cfg, err := baseCfg.MergeWithEnv(flagEnv)
+			if err != nil {
+				return err
+			}
+
+			if flagEnv != "" {
+				fmt.Fprintf(cmd.OutOrStdout(), "🌍 Using environment: %s\n", flagEnv)
+			}
+
+			// 3. Read Compose File
+			// Note: The compose file path might have changed due to env override
 			composeFile := cfg.Stack.ComposeFile
 			if composeFile == "" {
 				composeFile = "docker-compose.yml"
 			}
 			originalYaml, err := os.ReadFile(composeFile)
 			if err != nil {
-				return err
+				return fmt.Errorf("read compose file '%s': %w", composeFile, err)
 			}
 
 			currentYaml := originalYaml
@@ -76,7 +88,7 @@ func New() *cobra.Command {
 
 				imageReplacements := make(map[string]string)
 
-				// 2. Build and push each service
+				// Build and push each service
 				for _, bConf := range buildConfigs {
 					builtTag, err := build.Run(cmd.Context(), build.Options{
 						ImageName:  bConf.ImageName,
@@ -93,7 +105,7 @@ func New() *cobra.Command {
 					imageReplacements[bConf.ServiceName] = builtTag
 				}
 
-				// 3. Update YAML
+				// Update YAML with new image tags
 				currentYaml, err = compose.ReplaceImages(currentYaml, imageReplacements)
 				if err != nil {
 					return fmt.Errorf("replace images: %w", err)
@@ -104,6 +116,7 @@ func New() *cobra.Command {
 			// STEP B: SECRETS
 			// ---------------------------------------------------------
 			withSecrets := flagWithSecrets
+			// Check if CLI flag is set OR if config enables it (merged config)
 			if !cmd.Flags().Changed("with-secrets") && cfg.Deploy.WithSecrets {
 				withSecrets = true
 			}
@@ -152,6 +165,14 @@ func New() *cobra.Command {
 			c.Stdout = cmd.OutOrStdout()
 			c.Stderr = cmd.ErrOrStderr()
 
+			// --- Inject variables into process environment ---
+			// Docker CLI uses environment variables to substitute ${VAR} in compose files.
+			c.Env = os.Environ() // Start with current environment (PATH, DOCKER_HOST, etc.)
+			for k, v := range cfg.Variables {
+				c.Env = append(c.Env, fmt.Sprintf("%s=%s", k, v))
+				fmt.Fprintf(cmd.OutOrStdout(), "   Exporting var: %s=%s\n", k, v)
+			}
+
 			if err := c.Run(); err != nil {
 				return fmt.Errorf("deploy failed: %w", err)
 			}
@@ -164,6 +185,7 @@ func New() *cobra.Command {
 	cmd.Flags().StringVarP(&flagConfigPath, "config", "c", "", "Path to rollwave.yml")
 	cmd.Flags().BoolVar(&flagWithSecrets, "with-secrets", false, "Enable secret rotation")
 	cmd.Flags().BoolVar(&flagBuild, "build", false, "Build services defined in docker-compose.yml")
+	cmd.Flags().StringVarP(&flagEnv, "env", "e", "", "Environment to deploy to (e.g. staging, production)")
 
 	return cmd
 }

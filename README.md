@@ -4,6 +4,7 @@
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/rollwave-dev/rollwave)](https://goreportcard.com/report/github.com/rollwave-dev/rollwave)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 ![Rollwave Demo](demo.gif)
 
 Rollwave brings the developer experience of modern PaaS (like Vercel or Heroku) to your own servers running Docker Swarm. It handles the complexity of zero-downtime deployments, secret rotation, and build pipelines, so you don't have to write messy Bash scripts.
@@ -16,6 +17,7 @@ Docker Swarm is excellent for simple orchestration, but it lacks modern tooling.
 
 - **🔐 Zero-Downtime Secret Rotation:** Native Swarm services cannot easily rotate secrets without downtime. Rollwave implements an *Immutable Secret Pattern*, hashing your secrets and updating services seamlessly.
 - **🏗️ Integrated Build Pipeline:** No need for separate CI scripts. Rollwave reads your `docker-compose.yml`, builds your images, pushes them to your registry, and deploys them in one go.
+- **🌍 Multi-Environment Support:** Deploy to staging and production from a single config using simple overrides.
 - **🧹 Auto-Cleanup:** Automatically prunes old, unused secrets to keep your cluster clean.
 - **📄 Single Source of Truth:** Uses your existing `docker-compose.yml` as the definition for both building and deploying.
 
@@ -105,61 +107,82 @@ export DOCKER_HOST=ssh://user@your-swarm-manager
 rollwave deploy --build
 ```
 
-**What happens behind the scenes:**
-1.  **Build:** Rollwave builds the image defined in `docker-compose.yml` and tags it with the git short hash.
-2.  **Push:** Pushes the image to your registry.
-3.  **Secrets:** Hashes the values in `.env`. If `DB_PASSWORD` changed, it creates a new Swarm secret `my-stack_prod_DB_PASSWORD_<hash>`.
-4.  **Rewrite:** Generates a temporary Compose file mapping the service to the new specific secret version and image tag.
-5.  **Deploy:** Runs `docker stack deploy`. Swarm detects the configuration change and performs a rolling update.
+## Advanced Features
 
-## Private Registries
+### Multi-Environment Deployment
 
-If your images are stored in a private registry (GitHub Container Registry, GitLab Registry, AWS ECR, etc.), you need to provide credentials so Rollwave can push the image and Swarm can pull it.
+Rollwave allows you to define multiple environments (e.g., `staging`, `production`) in a single `rollwave.yml`. You can override stack names, secret prefixes, and inject environment variables.
 
-Set the following environment variables (e.g., in your CI/CD pipeline):
+**`rollwave.yml` example:**
+
+```yaml
+version: v1
+project: my-project
+
+# Defaults (e.g. Production)
+stack:
+  name: my-project-prod
+  compose_file: docker-compose.yml
+
+secrets:
+  stack_prefix: prod
+
+deploy:
+  with_secrets: true
+
+# Default variables (injected into docker-compose as env vars)
+variables:
+  APP_PORT: "8080"
+
+# Environment overrides
+environments:
+  staging:
+    stack:
+      name: my-project-staging
+    secrets:
+      stack_prefix: staging
+    variables:
+      APP_PORT: "8081"
+```
+
+To deploy to a specific environment:
+
+```bash
+# Deploy to Staging (uses port 8081 and staging prefix)
+rollwave deploy --env staging --build
+
+# Deploy to Production (uses defaults)
+rollwave deploy --build
+```
+
+### Private Registries
+
+If your images are stored in a private registry (GitHub Container Registry, GitLab Registry, AWS ECR, etc.), set the following environment variables:
 
 ```bash
 export ROLLWAVE_REGISTRY_USER="your-username"
 export ROLLWAVE_REGISTRY_PASSWORD="your-token-or-password"
 ```
 
-When you run `rollwave deploy --build`, the tool will:
-1. Automatically log in to the registry defined in your image name.
-2. Push the built image.
-3. Pass the authentication credentials to the Swarm cluster so it can pull the image securely.
+Rollwave will automatically log in, push the built image, and pass the authentication credentials to the Swarm cluster.
 
-### 4. Cleanup
+### Cleanup
 
 Over time, secret rotation creates many versions. Clean them up safely:
 
 ```bash
+# Prune default stack
 rollwave prune
-```
 
-This checks which secrets are currently used by running services and deletes the rest.
-
-## Configuration (`rollwave.yml`)
-
-```yaml
-version: v1
-project: my-project
-
-stack:
-  name: my-stack
-  compose_file: docker-compose.yml
-
-secrets:
-  stack_prefix: prod # Prefixes secrets like: stack_prod_KEY_hash
-
-deploy:
-  with_secrets: true # Automatically sync secrets on deploy
+# Prune staging stack
+rollwave prune --env staging
 ```
 
 ## Roadmap
 
 - [x] Support for Private Registry Authentication (`docker login` / config.json)
+- [x] Multi-environment support (staging/production in one config)
 - [ ] Automatic `prune` after successful deploy
-- [ ] Multi-environment support (staging/production in one config)
 - [ ] Binary releases via Homebrew
 
 ## License
