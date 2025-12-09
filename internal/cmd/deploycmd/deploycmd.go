@@ -9,6 +9,7 @@ import (
 	"github.com/rollwave-dev/rollwave/internal/build"
 	"github.com/rollwave-dev/rollwave/internal/compose"
 	"github.com/rollwave-dev/rollwave/internal/config"
+	"github.com/rollwave-dev/rollwave/internal/prune"
 	"github.com/rollwave-dev/rollwave/internal/secrets"
 	"github.com/spf13/cobra"
 )
@@ -35,7 +36,7 @@ func New() *cobra.Command {
 				return err
 			}
 
-			// 2. Apply Environment Overrides (if --env is set)
+			// 2. Apply Environment Overrides
 			cfg, err := baseCfg.MergeWithEnv(flagEnv)
 			if err != nil {
 				return err
@@ -46,7 +47,6 @@ func New() *cobra.Command {
 			}
 
 			// 3. Read Compose File
-			// Note: The compose file path might have changed due to env override
 			composeFile := cfg.Stack.ComposeFile
 			if composeFile == "" {
 				composeFile = "docker-compose.yml"
@@ -178,6 +178,16 @@ func New() *cobra.Command {
 			}
 
 			fmt.Fprintln(cmd.OutOrStdout(), "✅ Deployment successful.")
+
+			// --- AUTO PRUNE ---
+			if cfg.Deploy.Prune {
+				fmt.Fprintln(cmd.OutOrStdout(), "") // New line for separation
+				if err := prune.Run(cmd.Context(), cfg.Stack.Name, cmd.OutOrStdout(), cmd.ErrOrStderr()); err != nil {
+					// We don't fail the deployment if prune fails, just warn
+					fmt.Fprintf(cmd.ErrOrStderr(), "⚠️  Auto-prune failed: %v\n", err)
+				}
+			}
+
 			return nil
 		},
 	}

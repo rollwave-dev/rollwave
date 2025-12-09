@@ -20,6 +20,7 @@ type SecretsConfig struct {
 
 type DeployConfig struct {
 	WithSecrets bool `yaml:"with_secrets"`
+	Prune       bool `yaml:"prune"`
 }
 
 // --- Main Config Structure ---
@@ -31,7 +32,6 @@ type Config struct {
 	Secrets SecretsConfig `yaml:"secrets"`
 	Deploy  DeployConfig  `yaml:"deploy"`
 
-	// Variables injected into environment for envsubst in docker-compose
 	Variables map[string]string `yaml:"variables"`
 
 	Environments map[string]Environment `yaml:"environments"`
@@ -49,9 +49,9 @@ type Environment struct {
 
 	Deploy struct {
 		WithSecrets *bool `yaml:"with_secrets"`
+		Prune       *bool `yaml:"prune"`
 	} `yaml:"deploy"`
 
-	// Variables specific to this environment
 	Variables map[string]string `yaml:"variables"`
 }
 
@@ -64,7 +64,6 @@ func Load(path string) (*Config, error) {
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, err
 	}
-	// Initialize map if nil to avoid panic on assignment later
 	if cfg.Variables == nil {
 		cfg.Variables = make(map[string]string)
 	}
@@ -100,9 +99,11 @@ func (c *Config) MergeWithEnv(envName string) (*Config, error) {
 	if env.Deploy.WithSecrets != nil {
 		merged.Deploy.WithSecrets = *env.Deploy.WithSecrets
 	}
+	if env.Deploy.Prune != nil {
+		merged.Deploy.Prune = *env.Deploy.Prune
+	}
 
-	// 4. Variables Merge (NOVÉ)
-	// We start with defaults (already in merged.Variables) and overwrite with env specifics
+	// 4. Variables Merge
 	for k, v := range env.Variables {
 		merged.Variables[k] = v
 	}

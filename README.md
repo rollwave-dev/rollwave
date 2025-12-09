@@ -129,6 +129,7 @@ secrets:
 
 deploy:
   with_secrets: true
+  prune: true # Automatically delete unused secrets after successful deploy
 
 # Default variables (injected into docker-compose as env vars)
 variables:
@@ -168,7 +169,7 @@ Rollwave will automatically log in, push the built image, and pass the authentic
 
 ### Cleanup
 
-Over time, secret rotation creates many versions. Clean them up safely:
+Over time, secret rotation creates many versions. You can clean them up manually:
 
 ```bash
 # Prune default stack
@@ -178,11 +179,19 @@ rollwave prune
 rollwave prune --env staging
 ```
 
+**Automatic Cleanup:**
+To enable automatic pruning after every successful deployment, add this to your `rollwave.yml`:
+
+```yaml
+deploy:
+  prune: true
+```
+
 ## Roadmap
 
 - [x] Support for Private Registry Authentication (`docker login` / config.json)
 - [x] Multi-environment support (staging/production in one config)
-- [ ] Automatic `prune` after successful deploy
+- [x] Automatic `prune` after successful deploy
 - [ ] Binary releases via Homebrew
 
 ## License

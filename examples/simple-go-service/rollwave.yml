@@ -10,8 +10,8 @@ secrets:
 
 deploy:
   with_secrets: true
+  prune: true
 
-# Default variables (Production)
 variables:
   APP_PORT: "8080"
 
