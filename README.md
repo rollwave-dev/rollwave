@@ -18,6 +18,7 @@ Docker Swarm is excellent for simple orchestration, but it lacks modern tooling.
 - **🔐 Zero-Downtime Secret Rotation:** Native Swarm services cannot easily rotate secrets without downtime. Rollwave implements an *Immutable Secret Pattern*, hashing your secrets and updating services seamlessly.
 - **🏗️ Integrated Build Pipeline:** No need for separate CI scripts. Rollwave reads your `docker-compose.yml`, builds your images, pushes them to your registry, and deploys them in one go.
 - **🌍 Multi-Environment Support:** Deploy to staging and production from a single config using simple overrides.
+- **👀 Stack Visibility:** Instantly check the health, image versions, and ports of your running services with a simple CLI command.
 - **🧹 Auto-Cleanup:** Automatically prunes old, unused secrets to keep your cluster clean.
 - **📄 Single Source of Truth:** Uses your existing `docker-compose.yml` as the definition for both building and deploying.
 
@@ -107,6 +108,24 @@ export DOCKER_HOST=ssh://user@your-swarm-manager
 rollwave deploy --build
 ```
 
+### 4. Check Status
+
+See the health of your stack immediately:
+
+```bash
+rollwave status
+```
+
+Output:
+```text
+🌍 Environment: production (default)
+📦 Stack:       my-project-prod
+
+SERVICE   REPLICAS   IMAGE                       PORTS
+web       2/2        my-registry.com/app:v1      8080->80/tcp
+db        1/1        postgres:14                 -
+```
+
 ## Advanced Features
 
 ### Multi-Environment Deployment
@@ -146,14 +165,14 @@ environments:
       APP_PORT: "8081"
 ```
 
-To deploy to a specific environment:
+To deploy and check a specific environment:
 
 ```bash
-# Deploy to Staging (uses port 8081 and staging prefix)
+# Deploy to Staging
 rollwave deploy --env staging --build
 
-# Deploy to Production (uses defaults)
-rollwave deploy --build
+# Check Staging status
+rollwave status --env staging
 ```
 
 ### Private Registries
@@ -169,22 +188,14 @@ Rollwave will automatically log in, push the built image, and pass the authentic
 
 ### Cleanup
 
-Over time, secret rotation creates many versions. You can clean them up manually:
-
-```bash
-# Prune default stack
-rollwave prune
-
-# Prune staging stack
-rollwave prune --env staging
-```
+Over time, secret rotation creates many versions.
 
 **Automatic Cleanup:**
-To enable automatic pruning after every successful deployment, add this to your `rollwave.yml`:
+Add `deploy: prune: true` to your `rollwave.yml` to automatically delete unused secrets after every successful deployment.
 
-```yaml
-deploy:
-  prune: true
+**Manual Cleanup:**
+```bash
+rollwave prune --env staging
 ```
 
 ## Roadmap
@@ -192,6 +203,7 @@ deploy:
 - [x] Support for Private Registry Authentication (`docker login` / config.json)
 - [x] Multi-environment support (staging/production in one config)
 - [x] Automatic `prune` after successful deploy
+- [x] Stack status command (`rollwave status`)
 - [ ] Binary releases via Homebrew
 
 ## License

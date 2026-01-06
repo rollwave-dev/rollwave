@@ -8,6 +8,7 @@ import (
 	"github.com/rollwave-dev/rollwave/internal/cmd/initcmd"
 	"github.com/rollwave-dev/rollwave/internal/cmd/prunecmd"
 	"github.com/rollwave-dev/rollwave/internal/cmd/secretcmd"
+	"github.com/rollwave-dev/rollwave/internal/cmd/statuscmd"
 )
 
 func main() {
@@ -23,6 +24,7 @@ func main() {
 	root.AddCommand(deploycmd.New())
 	root.AddCommand(secretcmd.New())
 	root.AddCommand(prunecmd.New())
+	root.AddCommand(statuscmd.New())
 
 	root.Execute()
 }
